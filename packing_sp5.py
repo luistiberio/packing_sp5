@@ -15,14 +15,14 @@ DOWNLOAD_DIR = "/tmp/shopee_automation"
 
 # === COLOQUE O ID DA SUA PLANILHA ABAIXO ===
 # Exemplo: SPREADSHEET_ID = "1BxiMVs0XRA5nFMdKvBdBZjgmUWqnzv-al6M6lZJ"
-SPREADSHEET_ID = "1hoXYiyuArtbd2pxMECteTFSE75LdgvA2Vlb6gPpGJ-g" 
+SPREADSHEET_ID = "18ENzejWt3Zq7rtszQvUGbSotnrUyK9P64Z0iqVG4vJk" 
 # ===========================================
 
 def rename_downloaded_file(download_dir, download_path):
     """Renames the downloaded file to include the current hour."""
     try:
         current_hour = datetime.datetime.now().strftime("%H")
-        new_file_name = f"TO-Packed{current_hour}.zip"
+        new_file_name = f"TO-Packing{current_hour}.zip"
         new_file_path = os.path.join(download_dir, new_file_name)
         if os.path.exists(new_file_path):
             os.remove(new_file_path)
@@ -53,39 +53,36 @@ def unzip_and_process_data(zip_path, extract_to_dir):
         all_dfs = [pd.read_csv(file, encoding='utf-8') for file in csv_files]
         df_final = pd.concat(all_dfs, ignore_index=True)
 
-        # === INÍCIO DA LÓGICA DE PROCESSAMENTO ===
+        # === INÍCIO DA LÓGICA DE PROCESSAMENTO AJUSTADA ===
         print("Iniciando processamento dos dados...")
         
-        print("Aplicando filtro: SoC_SP_Cravinhos...")
+        # Filtro de localidade (Coluna índice 12)
         if not df_final.empty:
+            print("Aplicando filtro: SoC_SP_Cravinhos...")
             df_final = df_final[df_final.iloc[:, 12] == "SoC_SP_Cravinhos"]
             print(f"Linhas restantes após filtro: {len(df_final)}")
 
-        colunas_desejadas = [0, 9, 15, 17, 2, 23]
-        df_selecionado = df_final.iloc[:, colunas_desejadas].copy()
+        if df_final.empty:
+            print("DataFrame vazio após filtro.")
+            return None
+
+        # 1. Seleciona colunas de 0 a 32 (A até AG)
+        # O range 0:33 no iloc pega do 0 até o 32.
+        df_selecionado = df_final.iloc[:, 0:33].copy()
         
-        df_selecionado.columns = ['Chave', 'Coluna9', 'Coluna15', 'Coluna17', 'Coluna2', 'Coluna23']
+        # 2. Remove duplicatas mantendo apenas o VALOR ÚNICO da Coluna A (índice 0)
+        # O parâmetro 'keep=first' mantém a primeira linha encontrada para cada valor único em A
+        coluna_a_nome = df_selecionado.columns[0]
+        resultado = df_selecionado.drop_duplicates(subset=coluna_a_nome, keep='first')
 
-        contagem = df_selecionado['Chave'].value_counts().reset_index()
-        contagem.columns = ['Chave', 'Quantidade']
-
-        agrupado = df_selecionado.groupby('Chave').agg({
-            'Coluna9': 'first',
-            'Coluna15': 'first',
-            'Coluna17': 'first',
-            'Coluna2': 'first',
-            'Coluna23': 'first',
-        }).reset_index()
-
-        resultado = pd.merge(agrupado, contagem, on='Chave')
-        resultado = resultado[['Chave', 'Coluna9', 'Coluna15', 'Coluna17', 'Quantidade', 'Coluna2', 'Coluna23']]
+        print(f"Processamento concluído. Total de registros únicos: {len(resultado)}")
         
-        print(f"Processamento concluído. DataFrame final tem {len(resultado)} linhas.")
         shutil.rmtree(unzip_folder)
         return resultado
         
     except Exception as e:
         print(f"Erro ao processar dados: {e}")
+        traceback.print_exc()
         return None
 
 def update_google_sheet_with_dataframe(df_to_upload):
@@ -118,10 +115,10 @@ def update_google_sheet_with_dataframe(df_to_upload):
             print("❌ Erro de permissão! Verifique se o email do arquivo 'hxh.json' está compartilhado na planilha.")
             raise api_err
 
-        aba = planilha.worksheet("Packed")
+        aba = planilha.worksheet("to_management")
         
         # 1. Limpar a aba
-        print("Limpando a aba 'Packed'...")
+        print("Limpando a aba 'Packing'...")
         aba.clear() 
         
         # 2. Enviar Cabeçalho
@@ -166,8 +163,8 @@ async def main():
             print("Realizando login...")
             await page.goto("https://spx.shopee.com.br/")
             await page.wait_for_selector('xpath=//*[@placeholder="Ops ID"]', timeout=15000)
-            await page.locator('xpath=//*[@placeholder="Ops ID"]').fill('Ops71223')
-            await page.locator('xpath=//*[@placeholder="Senha"]').fill('@Shopee123')
+            await page.locator('xpath=//*[@placeholder="Ops ID"]').fill('Ops211113')
+            await page.locator('xpath=//*[@placeholder="Senha"]').fill('@Shopito123')
             await page.locator('xpath=/html/body/div[1]/div/div[2]/div/div/div[1]/div[3]/form/div/div/button').click()
             await page.wait_for_timeout(10000)
             
@@ -194,9 +191,9 @@ async def main():
             print("Exportando...")
             await page.get_by_role('button', name='Exportar').click(force=True)
             await page.wait_for_timeout(5000)
-            await page.locator('xpath=/html[1]/body[1]/span[4]/div[1]/div[1]/div[1]').click(force=True)
+            await page.locator('xpath=/html/body/span[4]/div/div/div[1]').click()
             await page.wait_for_timeout(5000)
-            await page.get_by_role("treeitem", name="Packed", exact=True).click(force=True)
+            await page.get_by_role("treeitem", name="Packing", exact=True).click(force=True)
             await page.wait_for_timeout(5000)
             await page.get_by_role("button", name="Confirmar").click(force=True)
             
