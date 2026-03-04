@@ -115,7 +115,7 @@ def update_google_sheet_with_dataframe(df_to_upload):
             print("❌ Erro de permissão! Verifique se o email do arquivo 'hxh.json' está compartilhado na planilha.")
             raise api_err
 
-        aba = planilha.worksheet("to_management")
+        aba = planilha.worksheet("to_packing")
         
         # 1. Limpar a aba
         print("Limpando a aba 'Packing'...")
@@ -163,7 +163,7 @@ async def main():
             print("Realizando login...")
             await page.goto("https://spx.shopee.com.br/")
             await page.wait_for_selector('xpath=//*[@placeholder="Ops ID"]', timeout=15000)
-            await page.locator('xpath=//*[@placeholder="Ops ID"]').fill('Ops211113')
+            await page.locator('xpath=//*[@placeholder="Ops ID"]').fill('Ops259776')
             await page.locator('xpath=//*[@placeholder="Senha"]').fill('@Shopito123')
             await page.locator('xpath=/html/body/div[1]/div/div[2]/div/div/div[1]/div[3]/form/div/div/button').click()
             await page.wait_for_timeout(10000)
