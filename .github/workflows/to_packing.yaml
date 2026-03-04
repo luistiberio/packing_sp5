@@ -1,4 +1,4 @@
-name: Base TO Packed
+name: Base TO Packing
 on:
   workflow_dispatch:        # Permite execução manual
 
